@@ -12,14 +12,87 @@ var debug = require('debug')('ec:server');
  * Get port from environment and store in Express.
  */
 var app = require('express')();
+// var router = app.Router();
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
 
 var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
+var user_number = 0;
+var room_number = 0;
 app.get('/', function (req, res) {
-  res.sendfile(__dirname + '/index.html');
+  user_number++;
+  if(user_number%2==0){
+    room_number = user_number-1;
+  }else{
+    room_number = user_number;
+  }
+  res.writeHead(302, {
+  'Location': room_number + '.html'
+  //add other headers here...
+  });
+  res.end();
+});
+
+app.get('/*.html', function (req, res) {
+
+  req.connection.on('close',function(){    
+       // code to handle connection abort
+      console.log("close");
+      io.on('connection', function(socket){
+         // socket.join('some room');
+         var msg = {text:"redriect"};
+          socket.emit('chat1',  msg);
+          socket.broadcast.emit('chat1', msg);
+      
+      });
+    });
+
+
+  res.writeHead(200, { 'content-type': 'text/html' });
+  res.end(
+                '<html><head>'+
+                '<title>'+room_number+'</title>'+
+                '<meta name="viewport" content="width=device-width, initial-scale=1.0">'+
+                // '<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script><!-- fonts market mvp screen --><ins class="adsbygoogle" style="display:inline-block;width:300px;height:600px" data-ad-client="ca-pub-4296686011657304" data-ad-slot="5159309384"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'+
+                '<link rel=stylesheet type="text/css" href="index.css">'+
+                '<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>'+
+                '<script src="http://code.jquery.com/jquery-1.11.1.js"></script>'+
+
+                '</head>'+
+               '<body>'+
+                '<ul id="messages"></ul>'+
+                '<form action="">'+
+                '<input id="m" autocomplete="off" /><button>Send</button>'+
+                '</form>'+
+                // '<script src="index.js" />'+
+                '<script>'+
+      "var socket = io.connect();"+
+      "$('form').submit(function(){"+
+        "var msg = {user:"+user_number+",room:"+room_number+",text: $('#m').val()  };"+
+ 
+        "socket.emit('chat', msg);"+
+        "$('#m').val('');"+
+        "return false;"+
+      "});"+
+      "socket.on('chat"+room_number+"', function(msg){"+
+        "$('#messages').append($('<li>').text(msg.text));"+
+      "});"+
+
+    "</script>"+
+      '</body></html>'
+                
+  );
+
+});
+
+app.get('/index.css', function (req, res) {
+  res.sendfile(__dirname + '/index.css');
+});
+app.get('/index.js', function (req, res) {
+  res.sendfile(__dirname + '/index.js');
+  
 });
 
 /**
@@ -37,22 +110,13 @@ server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
 
-
 io.on('connection', function(socket){
-   socket.join('some room');
-
-  // socket.emit('news', { hello: 'news' });
-  // socket.on('my other event', function (data) {
-  //   console.log(data);
-  // });
-
-  socket.on('chat message', function(msg){
+   // socket.join('some room');
+  socket.join('room'+room_number);
+  socket.on('chat', function(msg){
     console.log(msg);
-    // socket.emit('chat message', msg);
-    // socket.emit('broad', msg);
-    // socket.broadcast.emit('broad',msg);
-    socket.broadcast.emit('chat message',msg);
-
+    socket.emit('chat'+msg.room,  msg);
+    socket.broadcast.emit('chat'+msg.room, msg);
   });
 
 });
