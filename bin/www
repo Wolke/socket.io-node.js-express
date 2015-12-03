@@ -19,20 +19,46 @@ var io = require('socket.io')(server);
 var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
-var user_number = 0;
-var room_number = 0;
+// var user_number = 0;
+// var room_number = 0;
+var redis = require('redis');
+var client = redis.createClient(); //creates a new client
+// client.on('connect', function() {
+//     console.log('connected');
+// });
+
+// client.get('user_number', function(err, reply) {
+//     // console.log(reply);
+//   if(err!=null){
+//     client.set('user_number', 0);
+    
+//   };
+// });
+
+
 app.get('/', function (req, res) {
-  user_number++;
-  if(user_number%2==0){
-    room_number = user_number-1;
-  }else{
-    room_number = user_number;
-  }
-  res.writeHead(302, {
-  'Location': room_number + '.html'
-  //add other headers here...
+
+  client.get('user_number', function(err, user_number) {
+    console.log('user_number:'+user_number);
+    user_number++;
+    var room_number = 0;
+ 
+    if(user_number%2==0){
+      room_number = user_number-1;
+    }else{
+      room_number = user_number;
+    }
+    client.set('user_number', user_number);
+    
+    client.set('room_number', room_number);
+    res.writeHead(302, {
+    'Location': room_number + '.html'
+    //add other headers here...
+    });
+    res.end();
+
   });
-  res.end();
+  
 });
 
 app.get('/*.html', function (req, res) {
@@ -48,6 +74,10 @@ app.get('/*.html', function (req, res) {
       
       });
     });
+
+  client.get('room_number', function(err, room_number) {
+  client.get('user_number', function(err, user_number) {
+
 
 
   res.writeHead(200, { 'content-type': 'text/html' });
@@ -84,7 +114,8 @@ app.get('/*.html', function (req, res) {
       '</body></html>'
                 
   );
-
+});
+});
 });
 
 app.get('/index.css', function (req, res) {
@@ -111,8 +142,8 @@ server.on('error', onError);
 server.on('listening', onListening);
 
 io.on('connection', function(socket){
-   // socket.join('some room');
-  socket.join('room'+room_number);
+   socket.join('some room');
+  // socket.join('room'+room_number);
   socket.on('chat', function(msg){
     console.log(msg);
     socket.emit('chat'+msg.room,  msg);

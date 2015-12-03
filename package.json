@@ -14,6 +14,11 @@
     "jade": "~1.11.0",
     "morgan": "~1.6.1",
     "serve-favicon": "~2.3.0",
-    "socket.io": "1.2.0"
+    "socket.io": "1.2.0",
+    "redis":"*",
+    "redis-server":"*"
+  },
+  "devDependencies": {
+    "watchify": "^2.1.1"
   }
 }
